@@ -33,21 +33,23 @@ class AsciiFluid:
         self.particles: list[Particle] = []
 
     def input_file(self, filename: str):
+        # Read the file
         with open(filename, 'r') as f:
             text = f.read().expandtabs(4)
 
         x = y = 0
 
         for char in text:
-            if char == ' ':
+            if char == ' ':  # Ignore spaces
                 x += 1
                 continue
 
-            if char == '\n':
+            if char == '\n':  # Next row
                 x = 0
                 y += 2
                 continue
-        
+
+            # Each character represents two individual particles stacked up verticly
             p1 = Particle(x, y)
             p2 = Particle(x, y + 1)
 
@@ -60,8 +62,10 @@ class AsciiFluid:
             x += 1
     
     def update(self):
-        # Update the densities
+        # Iterate through every pair of particles and update the densities
         for p1 in self.particles:
+
+            # Set a high density for wall particles
             if p1.is_wall:
                 p1.dens = 9
             else:
@@ -72,11 +76,12 @@ class AsciiFluid:
                 dy = p1.y - p2.y
                 dist = math.sqrt(dx ** 2 + dy ** 2)
 
+                # If the two particles are close enough
                 if dist <= 2:
                     interaction = dist / 2 - 1
                     p1.dens += interaction ** 2
             
-        # Update the forces
+        # Iterate through every pair of particles and update the forces
         for p1 in self.particles:
             p1.fx = 0
             p1.fy = self.gravity
@@ -86,6 +91,7 @@ class AsciiFluid:
                 dy = p1.y - p2.y
                 dist = math.sqrt(dx ** 2 + dy ** 2)
 
+                # If the two particles are close enough
                 if dist <= 2:
                     interaction = dist / 2 - 1
                     p1.fx += interaction * (
@@ -99,29 +105,35 @@ class AsciiFluid:
         
         for p in self.particles:
             if not p.is_wall:
+                # Update velocities based on accelerations
                 if math.sqrt(p.fx ** 2 + p.fy ** 2) < 4.2:
                     p.vx += p.fx / 10
                     p.vy += p.fy / 10
                 else:
+                    # For numerical stability
                     p.vx += p.fx / 11
                     p.vy += p.fy / 11
-                
+
+                # Update positions based on velocities
                 p.x += p.vx
                 p.y += p.vy
         
     def render(self):
+        # Render the particles onto the terminal
         screen = [0] * (self.width * self.height)
         for p in self.particles:
             i = p.x
             j = p.y // 2
             idx = int(i + self.width * j)
 
+            # If the particle is inside the screen
             if j >= 0 and j < self.height - 1 and i >= 0 and i < self.width - 1:
-                screen[idx] |= 8
-                screen[idx + 1] |= 4
-                screen[idx + self.width] |= 2
-                screen[idx + self.width + 1] |= 1
-        
+                screen[idx] |= 8  # Set the fourth bit to 1
+                screen[idx + 1] |= 4  # Set the third bit to 1
+                screen[idx + self.width] |= 2  # Set the second bit to 1
+                screen[idx + self.width + 1] |= 1  # Set the first bit to 1
+
+        # Reset the cursor position
         display = '\x1b[1;1H'
         for i in range(len(screen)):
             if i % self.width == self.width - 1:
@@ -134,6 +146,7 @@ class AsciiFluid:
 if __name__ == '__main__':
     ascii_fluid = AsciiFluid(80, 24)
     ascii_fluid.input_file('pour_out.txt')
+    # Clear the screen
     print('\x1b[2J')
     while True:
         ascii_fluid.update()
